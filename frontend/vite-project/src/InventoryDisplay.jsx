@@ -72,28 +72,28 @@ function InventoryDisplay() {
 
   // --- Render the UI ---
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Inventory Data</h1>
+    <div className="inventory-container">
+      <h1 className="inventory-title">Inventory Data</h1>
 
       {/* Display loading message */}
-      {isLoading && <p>Loading inventory data...</p>}
+      {isLoading && <p className="loading-message">Loading inventory data...</p>}
 
       {/* Display error message */}
-      {error && <p className="text-red-500">{error}</p>}
+      {error && <p className="error-message">{error}</p>}
 
       {/* Display the last update time */}
-      {!isLoading && !error && <p className="text-sm text-gray-600 mb-4">Last Updated: {lastUpdate}</p>}
+      {!isLoading && !error && <p className="last-update">Last Updated: {lastUpdate}</p>}
 
       {/* Display the data table if data is available and no error */}
       {/* Ensure columnMapping is also loaded before rendering the table */}
       {!isLoading && !error && inventoryData.length > 0 && columnMapping.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-300 rounded-lg shadow-md">
+        <div className="table-container">
+          <table className="inventory-table">
             <thead>
               <tr>
                 {/* Render table headers using column names from the mapping */}
                 {columnMapping.map((col, index) => (
-                  <th key={col.id || index} className="py-2 px-4 border-b bg-gray-200 text-left text-sm font-semibold text-gray-700">
+                  <th key={col.id || index} className="table-header">
                     {col.name}
                   </th>
                 ))}
@@ -102,11 +102,11 @@ function InventoryDisplay() {
             <tbody>
               {/* Render table rows with data */}
               {inventoryData.map((item, rowIndex) => (
-                <tr key={rowIndex} className="hover:bg-gray-100">
+                <tr key={rowIndex} className="table-row">
                   {/* Render table cells for each item */}
                   {/* Use the column id from the mapping to access the correct value in the item object */}
                    {columnMapping.map((col, colIndex) => (
-                       <td key={col.id || colIndex} className="py-2 px-4 border-b text-sm text-gray-800">
+                       <td key={col.id || colIndex} className="table-cell">
                            {/* Access data using the column id */}
                            {item[col.id]}
                        </td>
@@ -120,11 +120,11 @@ function InventoryDisplay() {
 
       {/* Message if no data is available after loading */}
       {!isLoading && !error && inventoryData.length === 0 && (
-        <p>No inventory data available yet. Please ensure the Python script has run successfully.</p>
+        <p className="no-data-message">No inventory data available yet. Please ensure the Python script has run successfully.</p>
       )}
        {/* Message if columns couldn't be loaded */}
       {!isLoading && !error && inventoryData.length > 0 && columnMapping.length === 0 && (
-        <p className="text-red-500">Could not load column information from the backend.</p>
+        <p className="error-message">Could not load column information from the backend.</p>
       )}
     </div>
   );
