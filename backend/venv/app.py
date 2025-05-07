@@ -28,7 +28,12 @@ app = Flask(__name__, static_folder='../../frontend/vite-project/dist')
 # Note: This CORS configuration is primarily for when you run the React dev server separately.
 # When Flask serves the built React app, CORS is typically not needed for API calls
 # to the same Flask server.
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
+ALLOWED_ORIGINS = [
+    "http://localhost:5050",
+    "http://127.0.0.1:5050", # Include 127.0.0.1 as well to be safe
+    "http://localhost:5173"  # React development server default port
+]
+CORS(app, resources={r"/api/*": {"origins": ALLOWED_ORIGINS}})
 
 
 # --- Configuration for Google Sheets ---
