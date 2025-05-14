@@ -13,56 +13,217 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
     background-color: #ffffff;
   }
-  a:hover {
-    color: #747bff;
+
+}
+
+.inventory-container {
+  max-width: 800px; /* Limit the width of the container on larger screens */
+  margin: 20px auto; /* Center the container and add vertical margin */
+  padding: 15px; /* Slightly less padding on smaller screens */
+  background-color: #fff; /* White background for the container */
+  border-radius: 8px; /* Rounded corners */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Add a subtle shadow */
+  overflow: hidden; /* Ensure content doesn't spill out */
+}
+
+/* Dark mode container adjustments */
+@media (prefers-color-scheme: dark) {
+  .inventory-container {
+      background-color: #333; /* Darker background in dark mode */
+      box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1); /* Lighter shadow */
   }
-  button {
-    background-color: #f9f9f9;
+}
+
+
+.inventory-title {
+  text-align: center; /* Center the title */
+  color: #0056b3; /* A distinct color for the title */
+  margin-bottom: 15px; /* Space below the title */
+  font-size: 1.6em; /* Adjust font size for responsiveness */
+}
+
+/* Dark mode title color */
+@media (prefers-color-scheme: dark) {
+  .inventory-title {
+      color: #66b3ff; /* Lighter blue in dark mode */
   }
+}
+
+
+.loading-message,
+.error-message,
+.no-data-message {
+  text-align: center; /* Center messages */
+  margin-top: 15px; /* Space above messages */
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 0.95em; /* Slightly smaller font */
+}
+
+.loading-message {
+  color: #007bff; /* Blue for loading */
+  background-color: #e9f5ff;
+  border: 1px solid #b8daff;
+}
+
+.error-message {
+  color: #dc3545; /* Red for errors */
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+}
+
+.no-data-message {
+  color: #6c757d; /* Gray for no data */
+  background-color: #e2e6ea;
+  border: 1px solid #d6d8db;
+}
+
+/* Dark mode message adjustments */
+@media (prefers-color-scheme: dark) {
+  .loading-message {
+      color: #66b3ff;
+      background-color: #003366;
+      border-color: #0056b3;
+  }
+  .error-message {
+      color: #ff6b6b;
+      background-color: #4d0000;
+      border-color: #800000;
+  }
+  .no-data-message {
+      color: #b0b0b0;
+      background-color: #444;
+      border-color: #555;
+  }
+}
+
+
+.last-update {
+  text-align: right; /* Align last update to the right */
+  font-size: 0.85em; /* Smaller font size */
+  color: #555; /* Darker gray */
+  margin-bottom: 15px; /* Space below the timestamp */
+}
+
+/* Dark mode last update color */
+@media (prefers-color-scheme: dark) {
+  .last-update {
+      color: #b0b0b0; /* Lighter gray */
+  }
+}
+
+
+.table-container {
+  overflow-x: auto; /* Add horizontal scroll if table is too wide */
+  margin-top: 20px; /* Space above the table */
+  border: 1px solid #ddd; /* Add a border around the table container */
+  border-radius: 8px; /* Match container border radius */
+}
+
+/* Dark mode table container border */
+@media (prefers-color-scheme: dark) {
+  .table-container {
+      border-color: #555;
+  }
+}
+
+
+.inventory-table {
+  width: 100%; /* Make table take full width of its container */
+  border-collapse: collapse; /* Collapse borders between cells */
+  min-width: 400px; /* Ensure table is at least this wide to prevent squishing */
+}
+
+.table-header {
+  background-color: #007bff; /* Blue background for headers */
+  color: white; /* White text for headers */
+  padding: 12px 10px; /* Padding inside header cells */
+  text-align: left; /* Align header text to the left */
+  border-bottom: 2px solid #0056b3; /* Darker blue border below headers */
+  font-size: 0.9em; /* Slightly smaller header font */
+}
+
+/* Dark mode header adjustments */
+@media (prefers-color-scheme: dark) {
+  .table-header {
+      background-color: #0056b3;
+      border-bottom-color: #003366;
+  }
+}
+
+
+.table-row {
+  border-bottom: 1px solid #eee; /* Lighter gray border between rows */
+}
+
+/* Dark mode row border */
+@media (prefers-color-scheme: dark) {
+  .table-row {
+      border-bottom-color: #444;
+  }
+}
+
+
+.table-row:nth-child(even) {
+  background-color: #f9f9f9; /* Lighter zebra striping */
+}
+
+/* Dark mode zebra striping */
+@media (prefers-color-scheme: dark) {
+  .table-row:nth-child(even) {
+      background-color: #2b2b2b;
+  }
+}
+
+
+.table-row:hover {
+  background-color: #e0e0e0; /* Highlight row on hover */
+}
+
+/* Dark mode row hover */
+@media (prefers-color-scheme: dark) {
+  .table-row:hover {
+      background-color: #444;
+  }
+}
+
+
+.table-cell {
+  padding: 10px; /* Padding inside data cells */
+  text-align: left; /* Align cell text to the left */
+  font-size: 0.9em; /* Slightly smaller cell font */
+  word-break: break-word; /* Break long words in cells */
+}
+
+/* Basic responsiveness for smaller screens */
+@media (max-width: 600px) {
+  .inventory-container {
+      padding: 10px; /* Reduce padding on smaller screens */
+      margin: 10px; /* Reduce margin */
+  }
+
+  .inventory-title {
+      font-size: 1.4em; /* Further reduce title size */
+  }
+
+  .table-header,
+  .table-cell {
+      padding: 8px 6px; /* Reduce cell padding */
+      font-size: 0.85em; /* Further reduce font size */
+  }
+
+  /* Optional: Hide less important columns on very small screens */
+  /* You would need to add specific classes to your JSX for this */
+  /* For example, hide the 'Rate' column on screens less than 400px */
+  /* @media (max-width: 400px) {
+      .table-header.rate-column,
+      .table-cell.rate-column {
+          display: none;
+      }
+  } */
 }
