@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV /home/rgos/pyth-sql-all/vendor-pipeline/backend/venv
+set -gx VIRTUAL_ENV /home/rgos/pyth-sql-all/xmlrunner-main/backend/venv
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"bin $PATH
