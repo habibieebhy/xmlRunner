@@ -11,4 +11,4 @@ Its a 3 step process
 # NOTE: 
 1. IN DEVELOPMENT : Must Run both ports "npm run dev" for frontend and "python3 app.py" for backend and then run "python3 xmlRead.py" separately to work.
 
-2. IN (AFTER) BUILD : After running npm run build, flask backend looks for static files from frontend in the "dist" folder so only running "python3 app.py" and then run "python3 xmlRead.py" will work. UI will display on port 5050.
+2. IN (AFTER) BUILD : After running npm run build, flask backend looks for static files from frontend in the "dist" folder so only running "python3 app.py" and then run "python3 xmlRead.py" will work. UI will display on port 5050 or 5000.
