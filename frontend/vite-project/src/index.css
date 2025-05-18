@@ -1,11 +1,13 @@
+/* frontend/src/components/InventoryDisplayTables.css */
+
+/* These root styles might be better placed in your main index.css or App.css */
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+ 
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,13 +15,7 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
 
-}
 
 .inventory-container {
   max-width: 800px; /* Limit the width of the container on larger screens */
@@ -29,6 +25,8 @@
   border-radius: 8px; /* Rounded corners */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Add a subtle shadow */
   overflow: hidden; /* Ensure content doesn't spill out */
+  /* Add some spacing at the bottom for consistency if needed */
+   margin-bottom: 40px;
 }
 
 /* Dark mode container adjustments */
@@ -36,6 +34,7 @@
   .inventory-container {
       background-color: #333; /* Darker background in dark mode */
       box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1); /* Lighter shadow */
+      color: #e0e0e0; /* Default text color in dark mode */
   }
 }
 
@@ -117,6 +116,35 @@
   }
 }
 
+/* --- Styles for individual table sections --- */
+/* These generic styles work well because the React code applies */
+/* these classes to each dynamically rendered table section. */
+.table-section {
+    margin-bottom: 30px; /* Space between tables */
+    padding-top: 15px; /* Add a little space above the title if needed */
+    border-top: 1px solid #eee; /* Optional: separator line between sections */
+}
+
+/* Remove border top for the first table section */
+.table-section:first-of-type {
+    border-top: none;
+    padding-top: 0;
+}
+
+
+.table-title {
+    font-size: 1.5em;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #333; /* Dark gray title */
+}
+
+/* Dark mode table title color */
+@media (prefers-color-scheme: dark) {
+    .table-title {
+        color: #ccc; /* Lighter gray title */
+    }
+}
 
 .table-container {
   overflow-x: auto; /* Add horizontal scroll if table is too wide */
@@ -133,7 +161,7 @@
 }
 
 
-.inventory-table {
+.data-table {
   width: 100%; /* Make table take full width of its container */
   border-collapse: collapse; /* Collapse borders between cells */
   min-width: 400px; /* Ensure table is at least this wide to prevent squishing */
@@ -146,6 +174,8 @@
   text-align: left; /* Align header text to the left */
   border-bottom: 2px solid #0056b3; /* Darker blue border below headers */
   font-size: 0.9em; /* Slightly smaller header font */
+  /* Prevent headers from wrapping if not enough space, force scroll */
+  white-space: nowrap;
 }
 
 /* Dark mode header adjustments */
@@ -198,6 +228,8 @@
   text-align: left; /* Align cell text to the left */
   font-size: 0.9em; /* Slightly smaller cell font */
   word-break: break-word; /* Break long words in cells */
+  /* Add vertical alignment */
+  vertical-align: top;
 }
 
 /* Basic responsiveness for smaller screens */
@@ -217,13 +249,4 @@
       font-size: 0.85em; /* Further reduce font size */
   }
 
-  /* Optional: Hide less important columns on very small screens */
-  /* You would need to add specific classes to your JSX for this */
-  /* For example, hide the 'Rate' column on screens less than 400px */
-  /* @media (max-width: 400px) {
-      .table-header.rate-column,
-      .table-cell.rate-column {
-          display: none;
-      }
-  } */
 }

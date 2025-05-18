@@ -1,3 +1,6 @@
+# Ignore the entire backend venv directory
+/backend/venv/
+
 # Logs
 logs
 *.log

@@ -1,133 +1,166 @@
-// frontend/src/components/InventoryDisplay.jsx
+// frontend/src/components/InventoryDisplayTables.jsx
 
 import React, { useState, useEffect } from 'react';
-// You might need to install axios: npm install axios or yarn add axios
-// import axios from 'axios'; // Using fetch for simplicity here
 
-// Define the URLs for your Flask backend API
-// Make sure these match the port your Flask app is running on (5050)
-const API_URL = 'http://localhost:5050/api/get_latest_data';
-const COLUMNS_API_URL = 'http://localhost:5050/api/get_processed_columns';
+// Update API URLs to match your Flask backend endpoints
+const API_URL = 'http://localhost:5000/api/get_latest_data';
+const COLUMNS_API_URL = 'http://localhost:5000/api/get_processed_columns';
 
+// Optional: Mapping for more user-friendly table titles
+const COLLECTION_TITLES = {
+    'Ledger': 'Ledger Data',
+    'StockItem': 'Stock Item Data', 
+    'Company': 'Company Data',
+    'Group': 'Group Data',
+    'CostCategory': 'Cost Category Data',
+    'CostCentre': 'Cost Centre Data',
+    'Currency': 'Currency Data',
+    'Unit': 'Unit Data',
+    'Godown': 'Godown Data',
+    // Add other collection names from your COLLECTIONS_TO_TRY list as needed
+};
 
-function InventoryDisplay() {
-  // State to hold the inventory data fetched from the backend
-  const [inventoryData, setInventoryData] = useState([]);
-  // State to hold the column mapping (id and name) fetched from the backend
-  const [columnMapping, setColumnMapping] = useState([]);
-  // State to track loading status
+function InventoryDisplayTables() {
+  // State variables to hold data and columns for ALL collections
+  // Use objects where keys are collection names
+  const [collectionData, setCollectionData] = useState({}); // { CollectionName: [...] }
+  const [collectionColumns, setCollectionColumns] = useState({}); // { CollectionName: [...] }
+
   const [isLoading, setIsLoading] = useState(true);
-  // State to hold any error messages
   const [error, setError] = useState(null);
-  // State to hold the timestamp of the last update
   const [lastUpdate, setLastUpdate] = useState(null);
 
-  // useEffect hook to fetch data when the component mounts
   useEffect(() => {
-    // Function to fetch data from the Flask backend
+    let isMounted = true; // Flag to prevent state updates if component unmounts
+
     const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+
       try {
-        // --- Step 1: Fetch the list of columns (id and name mapping) ---
+        // Fetch columns for all collections
         const columnsResponse = await fetch(COLUMNS_API_URL);
         if (!columnsResponse.ok) {
-             throw new Error(`HTTP error! status: ${columnsResponse.status} from ${COLUMNS_API_URL}`);
+          throw new Error(`HTTP error! status: ${columnsResponse.status} from ${COLUMNS_API_URL}`);
         }
-        const columnsData = await columnsResponse.json();
-        // Store the column mapping in state
-        setColumnMapping(columnsData);
+        const columnsData = await columnsResponse.json(); // Expected: { CollectionName1: [...], CollectionName2: [...] }
 
-        // --- Step 2: Fetch the actual inventory data ---
+        // Fetch the latest data for all collections
         const dataResponse = await fetch(API_URL);
         if (!dataResponse.ok) {
           throw new Error(`HTTP error! status: ${dataResponse.status} from ${API_URL}`);
         }
-        const result = await dataResponse.json();
+        const result = await dataResponse.json(); // Expected: { data: { CollectionName1: [...], CollectionName2: [...] }, last_update: "..." }
 
-        // --- Step 3: Update state with fetched data and last update time ---
-        // The 'data' property from the Flask response contains the list of items
-        setInventoryData(result.data);
-        // The 'last_update' property contains the timestamp
-        setLastUpdate(result.last_update ? new Date(result.last_update).toLocaleString() : 'N/A');
+        if (isMounted) {
+          // Update state with fetched data and columns objects directly
+          // Ensure data and columns properties exist and are objects
+          setCollectionColumns(columnsData || {});
+          setCollectionData(result.data || {});
 
-      } catch (error) {
-        // Catch and set any errors that occur during fetching
-        console.error("Error fetching inventory data:", error);
-        setError("Failed to fetch inventory data. Please ensure the Flask backend is running and accessible.");
+          setLastUpdate(
+            result.last_update
+              ? new Date(result.last_update).toLocaleString()
+              : 'N/A'
+          );
+        }
+      } catch (err) {
+        console.error('Error fetching Tally data:', err);
+        if (isMounted) {
+          setError(
+            'Failed to fetch Tally data. Please ensure the Flask backend is running and accessible.'
+          );
+        }
       } finally {
-        // Set loading to false once fetching is complete (success or failure)
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    // Call the fetchData function when the component mounts
+    // Initial fetch
     fetchData();
 
-    // Optional: Set up an interval to refetch data periodically
-    // const intervalId = setInterval(fetchData, 15000); // Refetch every 15 seconds (adjust as needed)
+    // Set up interval for periodic fetching (every 15 seconds)
+    const intervalId = setInterval(fetchData, 15000);
 
-    // Cleanup function to clear the interval when the component unmounts
-    // return () => clearInterval(intervalId);
+    // Cleanup function to clear interval and prevent state updates on unmount
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, []); // Empty dependency array means this effect runs only once on mount
 
-  }, []); // The empty dependency array ensures this effect runs only once on mount
 
-  // --- Render the UI ---
+    // Get a list of collection names for which we have both data and columns
+    const availableCollections = Object.keys(collectionData).filter(collectionName =>
+        collectionData[collectionName] &&
+        collectionData[collectionName].length > 0 &&
+        collectionColumns[collectionName] &&
+        collectionColumns[collectionName].length > 0
+    );
+
+
   return (
-    <div className="inventory-container">
-      <h1 className="inventory-title">Inventory Data</h1>
+    <div className="inventory-container"> {/* Main container class */}
+      <h1 className="inventory-title">Tally Data Display</h1> {/* Title class */}
 
-      {/* Display loading message */}
-      {isLoading && <p className="loading-message">Loading inventory data...</p>}
+      {isLoading && <p className="loading-message">Loading Tally data...</p>} {/* Loading message class */}
+      {error && <p className="error-message">{error}</p>} {/* Error message class */}
+      {!isLoading && !error && lastUpdate && <p className="last-update">Last Updated: {lastUpdate}</p>} {/* Last update class */}
 
-      {/* Display error message */}
-      {error && <p className="error-message">{error}</p>}
 
-      {/* Display the last update time */}
-      {!isLoading && !error && <p className="last-update">Last Updated: {lastUpdate}</p>}
-
-      {/* Display the data table if data is available and no error */}
-      {/* Ensure columnMapping is also loaded before rendering the table */}
-      {!isLoading && !error && inventoryData.length > 0 && columnMapping.length > 0 && (
-        <div className="table-container">
-          <table className="inventory-table">
-            <thead>
-              <tr>
-                {/* Render table headers using column names from the mapping */}
-                {columnMapping.map((col, index) => (
-                  <th key={col.id || index} className="table-header">
-                    {col.name}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {/* Render table rows with data */}
-              {inventoryData.map((item, rowIndex) => (
-                <tr key={rowIndex} className="table-row">
-                  {/* Render table cells for each item */}
-                  {/* Use the column id from the mapping to access the correct value in the item object */}
-                   {columnMapping.map((col, colIndex) => (
-                       <td key={col.id || colIndex} className="table-cell">
-                           {/* Access data using the column id */}
-                           {item[col.id]}
-                       </td>
-                   ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {!isLoading && !error && availableCollections.length === 0 && (
+         <p className="no-data-message">
+             No Tally data available yet. Please ensure the Flask backend is running,
+             connected to Tally, and has successfully uploaded data.
+         </p>
       )}
 
-      {/* Message if no data is available after loading */}
-      {!isLoading && !error && inventoryData.length === 0 && (
-        <p className="no-data-message">No inventory data available yet. Please ensure the Python script has run successfully.</p>
+      {/* --- Dynamic Table Rendering --- */}
+      {!isLoading && !error && availableCollections.length > 0 && (
+          availableCollections.map(collectionName => {
+              const data = collectionData[collectionName];
+              const columns = collectionColumns[collectionName];
+              const tableTitle = COLLECTION_TITLES[collectionName] || `${collectionName} Data`; // Use friendly title or collection name
+
+              return (
+                  <div key={collectionName} className="table-section"> {/* Use collection name as key */}
+                      <h2 className="table-title">{tableTitle}</h2> {/* Dynamic section title */}
+                      {data && data.length > 0 ? (
+                          <div className="table-container"> {/* Table container class */}
+                              <table className="data-table"> {/* Table class */}
+                                  <thead>
+                                      <tr>
+                                          {columns.map((col, index) => (
+                                              <th key={col.id || index} className="table-header">{col.name}</th>
+                                          ))}
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      {data.map((item, rowIndex) => (
+                                          <tr key={rowIndex} className="table-row"> {/* Row class */}
+                                              {columns.map((col, colIndex) => (
+                                                  <td key={col.id || colIndex} className="table-cell"> {/* Cell class */}
+                                                      {/* Access data using the column ID as the key */}
+                                                      {item[col.id] !== undefined ? String(item[col.id]) : ''} {/* Convert to string for rendering */}
+                                                  </td>
+                                              ))}
+                                          </tr>
+                                      ))}
+                                  </tbody>
+                              </table>
+                          </div>
+                      ) : (
+                          <p className="no-data-message">No {tableTitle.toLowerCase()} available yet.</p>
+                      )}
+                  </div>
+              );
+          })
       )}
-       {/* Message if columns couldn't be loaded */}
-      {!isLoading && !error && inventoryData.length > 0 && columnMapping.length === 0 && (
-        <p className="error-message">Could not load column information from the backend.</p>
-      )}
+
     </div>
   );
 }
 
-export default InventoryDisplay;
+export default InventoryDisplayTables;

@@ -1,138 +1,134 @@
 import requests
-import xml.etree.ElementTree as ET
 import json
-import logging
-import time
-from datetime import datetime
+import os
+import xml.etree.ElementTree as ET
 
-# --- Logging ---
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+TALLY_URL = "http://localhost:9000"
+AVAILABLE_COLLECTIONS_FILE = "available_collections.json"
+EXPORT_FOLDER = "exports"
 
-# --- Config ---
-TALLY_API_URL = 'http://localhost:9000/'
-FLASK_BACKEND_URL = 'http://localhost:5050/api/upload_tally_data'
+# Add the URL for your Flask application endpoint
+FLASK_APP_URL = "http://localhost:5000/upload_tally_data"
 
-TALLY_XML_REQUEST_PAYLOAD = """
-<ENVELOPE>
+COLLECTIONS_TO_TRY = [
+    "Company",
+    "Ledger",
+    "StockItem",
+    "Group",
+    "CostCategory",
+    "CostCentre",
+    "Currency",
+    "Unit",
+    "Godown",
+]
+
+ENVELOPE_TEMPLATE = """<ENVELOPE>
   <HEADER>
-    <TALLYREQUEST>Export Data</TALLYREQUEST>
+    <VERSION>1</VERSION>
+    <TALLYREQUEST>Export</TALLYREQUEST>
+    <TYPE>Collection</TYPE>
+    <ID>{collection_id}</ID>
   </HEADER>
   <BODY>
-    <EXPORTDATA>
-      <REQUESTDESC>
-        <REPORTNAME>Day Book</REPORTNAME>
-        <STATICVARIABLES>
-          <SVFROMDATE>20240401</SVFROMDATE>
-          <SVTODATE>20240531</SVTODATE>
-          <EXPLODEFLAG>Yes</EXPLODEFLAG>
-          <SVVIEWNAME>Accounting Voucher View</SVVIEWNAME>
-          <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
-        </STATICVARIABLES>
-      </REQUESTDESC>
-    </EXPORTDATA>
+    <DESC></DESC>
   </BODY>
-</ENVELOPE>
-"""
+</ENVELOPE>"""
 
-# --- Helpers ---
-
-def element_to_dict(element):
-    """Recursive conversion of XML to dict."""
-    def recursive_parse(elem):
-        result = {}
-        for child in elem:
-            key = child.tag.split('}')[-1]
-            if len(child):
-                value = recursive_parse(child)
-            else:
-                value = child.text.strip() if child.text else None
-
-            if key.endswith('.LIST'):
-                key = key.replace('.LIST', '')
-                result.setdefault(key, []).append(value)
-            else:
-                result[key] = value
-        return result
-    return recursive_parse(element)
-
-def parse_tally_response(xml_string):
+# Query Tally and return raw XML if available
+def query_tally(collection_id):
+    body = ENVELOPE_TEMPLATE.format(collection_id=collection_id)
+    headers = {"Content-Type": "text/xml"}
     try:
-        root = ET.fromstring(xml_string)
-        request_data = root.find('.//REQUESTDATA')
-        if request_data is None:
-            logging.error("REQUESTDATA not found in Tally response.")
-            return None
-
-        tally_messages = []
-        for tally_msg in request_data.findall('.//TALLYMESSAGE'):
-            for voucher in tally_msg.findall('.//VOUCHER'):
-                v_data = element_to_dict(voucher)
-                tally_messages.append(v_data)
-
-        if tally_messages:
-            return {'REQUESTDATA': {'TALLYMESSAGE': tally_messages}}
-        else:
-            logging.warning("No VOUCHER data found inside REQUESTDATA.")
-            return None
-    except ET.ParseError as e:
-        logging.error(f"XML Parse Error: {e}")
+        res = requests.post(TALLY_URL, data=body, headers=headers, timeout=10)
+        if "<ENVELOPE>" in res.text:
+            return res.text
+        return None
+    except Exception as e:
+        print(f" Error querying {collection_id}: {e}")
         return None
 
-def send_data_to_flask(data):
-    if not data:
-        logging.warning("No data to send to Flask.")
-        return False
+# Save available collections
+def create_available_directory():
+    available_collections = []
+    print("\n Checking available collections in Tally...\n")
+    for coll in COLLECTIONS_TO_TRY:
+        response = query_tally(coll)
+        if response:
+            print(f" Found: {coll}")
+            available_collections.append(coll)
+        else:
+            print(f" Not Found: {coll}")
 
-    for attempt in range(3):
-        try:
-            response = requests.post(
-                FLASK_BACKEND_URL,
-                json=data,
-                headers={'Content-Type': 'application/json'},
-                timeout=10
-            )
-            response.raise_for_status()
-            json_response = response.json()
-            if json_response.get('status') == 'success':
-                logging.info("Data successfully sent to Flask backend.")
-                return True
-            else:
-                logging.error("Flask responded with an error: %s", json_response)
-        except requests.exceptions.RequestException as e:
-            logging.warning("Attempt %d failed: %s", attempt + 1, str(e))
-            time.sleep(2 ** attempt)
-    logging.error("All attempts to send data failed.")
-    return False
+    with open(AVAILABLE_COLLECTIONS_FILE, "w") as file:
+        json.dump(available_collections, file)
+    print(f"\n Available collections saved to {AVAILABLE_COLLECTIONS_FILE}\n")
 
-# --- Main Execution ---
+    return available_collections
 
-def main():
-    logging.info("Starting Tally-to-Flask integration")
+# Pretty-print nested XML data
+def print_element(elem, indent=0):
+    text = elem.text.strip() if elem.text else ""
+    if text:
+        print("  " * indent + f"{elem.tag}: {text}")
+    for child in elem:
+        print_element(child, indent + 1)
+
+# Extract and print data, also save XML file
+def extract_and_save_data(xml_text, collection_name):
+    print(f"\n Data from collection: {collection_name}\n{'-'*60}")
     try:
-        # Send request to Tally
-        response = requests.post(
-            TALLY_API_URL,
-            data=TALLY_XML_REQUEST_PAYLOAD,
-            headers={'Content-Type': 'application/xml'},
-            timeout=15
-        )
-        response.raise_for_status()
-        logging.info("Tally response received.")
-
-        # Parse XML response
-        parsed_data = parse_tally_response(response.text)
-        if not parsed_data:
-            logging.error("Failed to parse Tally response.")
+        root = ET.fromstring(xml_text)
+        body = root.find(".//BODY")
+        if body is None:
+            print(" No BODY tag found.")
             return
 
-        # Send parsed data to Flask
-        send_data_to_flask(parsed_data)
+        data = body.find(".//DATA")
+        if data is None:
+            print(" No DATA tag found.")
+            return
 
+        print_element(data)
+
+        # Save XML
+        os.makedirs(EXPORT_FOLDER, exist_ok=True)
+        with open(f"{EXPORT_FOLDER}/{collection_name}.xml", "w", encoding="utf-8") as file:
+            file.write(xml_text)
+        print(f"💾 Saved XML to {EXPORT_FOLDER}/{collection_name}.xml")
+
+    except ET.ParseError as e:
+        print(f"❌ XML Parse Error for {collection_name}: {e}")
+
+# Function to send data to Flask
+def send_data_to_flask(xml_text, collection_name):
+    headers = {"Content-Type": "text/xml"}
+    try:
+        print(f" Sending data for {collection_name} to Flask at {FLASK_APP_URL}...")
+        # Send the XML text as the request body
+        res = requests.post(FLASK_APP_URL, data=xml_text, headers=headers, timeout=10)
+        res.raise_for_status() # Raise an exception for bad status codes (4xx or 5xx)
+        print(f" Successfully sent data for {collection_name} to Flask. Response: {res.text}")
+    except requests.exceptions.RequestException as e:
+        print(f" Error sending data for {collection_name} to Flask: {e}")
     except Exception as e:
-        logging.error("Main execution failed: %s", str(e), exc_info=True)
+        print(f" An unexpected error occurred while sending data for {collection_name} to Flask: {e}")
 
-if __name__ == '__main__':
+# Main flow
+def main():
+    available_collections = create_available_directory()
+
+    for coll in available_collections:
+        print(f"\n Querying Tally for collection: {coll}")
+        xml_response = query_tally(coll)
+        if xml_response:
+
+            # ✅ Add the call to send data to Flask
+            send_data_to_flask(xml_response, coll)
+
+        else:
+            print(f" Failed to get data for {coll}")
+
+    print("\n All collections processed.")
+
+if __name__ == "__main__":
     main()
