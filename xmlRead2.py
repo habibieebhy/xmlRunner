@@ -2,13 +2,15 @@ import requests
 import json
 import os
 import xml.etree.ElementTree as ET
+import schedule
+import time
 
 TALLY_URL = "http://localhost:9000"
 AVAILABLE_COLLECTIONS_FILE = "available_collections.json"
 EXPORT_FOLDER = "exports"
 
 # Add the URL for your Flask application endpoint
-FLASK_APP_URL = "http://localhost:5000/upload_tally_data"
+FLASK_APP_URL = "http://localhost:5000/api/upload_tally_data"
 
 COLLECTIONS_TO_TRY = [
     "Company",
@@ -131,4 +133,15 @@ def main():
     print("\n All collections processed.")
 
 if __name__ == "__main__":
+    #RUN IMMIDIATELY
     main()
+    # Schedule the main function to run every 2 minutes
+    schedule.every(2).minutes.do(main)
+
+    print("📆 Starting periodic data extraction... Press Ctrl+C to stop.")
+    try:
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n🛑 Stopped by user.")
