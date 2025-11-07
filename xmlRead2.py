@@ -10,7 +10,7 @@ AVAILABLE_COLLECTIONS_FILE = "available_collections.json"
 EXPORT_FOLDER = "exports"
 
 # Add the URL for your Flask application endpoint
-FLASK_APP_URL = "http://localhost:5000/api/upload_tally_data"
+FLASK_APP_URL = "http://localhost:6000/api/upload_tally_data"
 
 COLLECTIONS_TO_TRY = [
     "Company",
