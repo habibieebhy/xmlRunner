@@ -1,1 +1,0 @@
-([('app', '/Users/zaheerabbas/XMLRUNNER/xmlRunner/dist/app', 'EXECUTABLE')],)
