@@ -19,7 +19,7 @@ jobs:
       - name: Cache pip
         uses: actions/cache@v4
         with:
-          path: ~\AppData\Local\pip\Cache
+          path: "~\\AppData\\Local\\pip\\Cache"
           key: pip-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
 
       - name: Set up Python
@@ -42,19 +42,48 @@ jobs:
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
 
-      - name: Compute version from tag
-        if: startsWith(github.ref, 'refs/tags/')
+      # 👇 Single source of truth for version
+      - name: Set version
+        id: set_version
         shell: bash
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            ver="${GITHUB_REF#refs/tags/}"
+          else
+            ver="dev-${GITHUB_RUN_NUMBER}"
+          fi
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
 
-      - name: Compile installer
-        run: iscc /DAppVersion="${{ env.VERSION || 'dev' }}" installer.iss
+      - name: Verify build outputs
+        shell: pwsh
+        run: |
+          dir dist
+          if (!(Test-Path dist\app.exe)) { throw "dist\app.exe missing" }
+          if (!(Test-Path dist\xmlRead2.exe)) { throw "dist\xmlRead2.exe missing" }
+          if (!(Test-Path config.json.example)) { throw "config.json.example missing" }
+
+      - name: Compile installer (Inno)
+        shell: pwsh
+        run: |
+          $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { throw "ISCC not found at $iscc" }
+          New-Item -ItemType Directory -Force -Path dist-installer | Out-Null
+          $v = "${{ steps.set_version.outputs.version }}"
+          & $iscc `
+            "/DMyAppVersion=$v" `
+            "/Odist-installer" `
+            "/F BrixtaSetup-$v" `
+            "/L+dist-installer\iscc.log" `
+            "installer.iss"
 
       - name: Upload installer artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: BrixtaSetup
-          path: dist-installer/*.exe
+          path: |
+            dist-installer/*.exe
+            dist-installer/iscc.log
 
   release:
     if: startsWith(github.ref, 'refs/tags/')
