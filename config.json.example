@@ -1,0 +1,5 @@
+{
+  "flask_port": 6000,
+  "tally_url": "http://localhost:9000",
+  "export_folder": "C:\\ProgramData\\BrixtaTallyAgent\\exports"
+}
