@@ -1,8 +1,13 @@
-; installer.iss
+; installer.iss — Brixta Tally Sync Agent (stable layout)
+#define MyAppName "Brixta Tally Sync Agent"
+#define MyAppVersion "1.0.3"
+#define InstallRoot "C:\BrixtaTallyAgent"
+
 [Setup]
-AppName=Brixta Tally Sync Agent
-AppVersion=1.0.0
-DefaultDirName={pf}\BrixtaTallyAgent
+AppName={#MyAppName}
+AppVersion={#MyAppVersion}
+AppPublisher=Brixta
+DefaultDirName={code:GetInstallDir}
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 OutputDir=dist-installer
@@ -10,29 +15,75 @@ OutputBaseFilename=BrixtaSetup
 Compression=lzma
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64
+PrivilegesRequired=admin
+WizardStyle=modern
+CloseApplications=yes
+RestartIfNeededByRun=no
+UninstallDisplayIcon={app}\app.exe
 
+[Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
+
+; --------- ensure writable folders exist ----------
+[Dirs]
+Name: "{app}"; Permissions: users-full
+Name: "{app}\logs"; Permissions: users-full
+Name: "{app}\exports"; Permissions: users-full
+Name: "{app}\parsed_exports"; Permissions: users-full
+
+; --------- files from PyInstaller dist -------------
 [Files]
-Source: "dist\app.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "dist\xmlRead2.exe"; DestDir: "{app}"; Flags: ignoreversion
+; If your GH Action outputs direct to dist\*.exe keep these lines.
+Source: "dist\app.exe"; DestDir: "{app}"; Flags: ignoreversion replacesameversion
+Source: "dist\xmlRead2.exe"; DestDir: "{app}"; Flags: ignoreversion replacesameversion
 Source: "config.json.example"; DestDir: "{app}"; DestName: "config.json"; Flags: onlyifdoesntexist
 
+; Optional helper to open logs quickly (skip if you don't have it)
+; Source: "installer-assets\view-logs.bat"; DestDir: "{app}"; Flags: ignoreversion
+
+; --------- stop old tasks / processes before overwrite ----------
 [Run]
-; Start receiver after install (non-blocking)
-Filename: "{app}\app.exe"; Flags: nowait postinstall skipifsilent
+Filename: "schtasks.exe"; Parameters: "/End /TN ""Brixta Receiver"""; Flags: runhidden; StatusMsg: "Stopping old task Brixta Receiver..."; Check: TaskExists('Brixta Receiver')
+Filename: "schtasks.exe"; Parameters: "/End /TN ""Brixta Data Pump"""; Flags: runhidden; StatusMsg: "Stopping old task Brixta Data Pump..."; Check: TaskExists('Brixta Data Pump')
+Filename: "schtasks.exe"; Parameters: "/Delete /F /TN ""Brixta Receiver"""; Flags: runhidden; Check: TaskExists('Brixta Receiver')
+Filename: "schtasks.exe"; Parameters: "/Delete /F /TN ""Brixta Data Pump"""; Flags: runhidden; Check: TaskExists('Brixta Data Pump')
+Filename: "taskkill.exe"; Parameters: "/IM app.exe /F"; Flags: runhidden skipifsilent
+Filename: "taskkill.exe"; Parameters: "/IM xmlRead2.exe /F"; Flags: runhidden skipifsilent
 
-[Tasks]
-Name: "CreateTasks"; Description: "Register background tasks"; Flags: checkedonce
-
-[Run]
-; Receiver: run on system startup
+; --------- create new scheduled tasks ----------
+; Receiver = Flask listener: start on user logon, highest privileges
 Filename: "schtasks.exe"; \
-  Parameters: "/Create /TN ""BrixtaReceiver"" /SC ONSTART /TR ""\""{app}\app.exe\"" "" /RL HIGHEST /F"; \
-  StatusMsg: "Creating Receiver task..."; Flags: runascurrentuser runhidden
+  Parameters: "/Create /F /RL HIGHEST /SC ONLOGON /TN ""Brixta Receiver"" /TR ""\""{app}\app.exe\"""" /RU ""{user name}"""; \
+  Flags: runhidden; StatusMsg: "Registering task: Brixta Receiver"
 
-; DataPump: run every 5 minutes
+; Data Pump = xmlRead2: every 2 minutes
 Filename: "schtasks.exe"; \
-  Parameters: "/Create /TN ""BrixtaDataPump"" /SC MINUTE /MO 5 /TR ""\""{app}\xmlRead2.exe\"" "" /RL HIGHEST /F"; \
-  StatusMsg: "Creating DataPump task..."; Flags: runascurrentuser runhidden
+  Parameters: "/Create /F /RL HIGHEST /SC MINUTE /MO 2 /TN ""Brixta Data Pump"" /TR ""\""{app}\xmlRead2.exe\"""" /RU ""{user name}"""; \
+  Flags: runhidden; StatusMsg: "Registering task: Brixta Data Pump"
 
-; Kick DataPump once immediately
-Filename: "{app}\xmlRead2.exe"; Flags: nowait runhidden
+; --------- kick them once now ----------
+Filename: "schtasks.exe"; Parameters: "/Run /TN ""Brixta Receiver"""; Flags: runhidden
+Filename: "schtasks.exe"; Parameters: "/Run /TN ""Brixta Data Pump"""; Flags: runhidden
+
+; --------- uninstall cleanup ----------
+[UninstallRun]
+Filename: "schtasks.exe"; Parameters: "/End /TN ""Brixta Receiver"""; Flags: runhidden
+Filename: "schtasks.exe"; Parameters: "/Delete /F /TN ""Brixta Receiver"""; Flags: runhidden
+Filename: "schtasks.exe"; Parameters: "/End /TN ""Brixta Data Pump"""; Flags: runhidden
+Filename: "schtasks.exe"; Parameters: "/Delete /F /TN ""Brixta Data Pump"""; Flags: runhidden
+
+[Code]
+function TaskExists(const TaskName: string): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := (ShellExec('', 'schtasks.exe',
+    '/Query /TN "' + TaskName + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)) and
+    (ResultCode = 0);
+end;
+
+function GetInstallDir(Param: string): string;
+begin
+  { Allow override with /DIR="..." if ever needed, else use C:\BrixtaTallyAgent }
+  Result := ExpandConstant('{param:InstallDir|' + '{#InstallRoot}' + '}');
+end;
